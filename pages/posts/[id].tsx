@@ -2,7 +2,9 @@ import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import Date from '../../components/date';
 import Layout from '../../components/layout';
-import { getAllPostIds, getPostData } from '../../lib/posts';
+import {
+	getAllPostIds, getAllPostIdsFromGit, getPostData, getPostDataFromGit
+} from '../../lib/posts';
 import utilStyles from '../../styles/utils.module.css';
 
 type PropsType = {
@@ -33,6 +35,7 @@ export default function Post({ postData }: PropsType) {
 
 export const getStaticPaths: GetStaticPaths = async () => {
 	const paths = getAllPostIds();
+	// const paths = await getAllPostIdsFromGit();
 	return {
 		paths,
 		fallback: false
@@ -41,6 +44,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
 
 export const getStaticProps: GetStaticProps = async ({ params }) => {
 	const postData = await getPostData(params.id as string);
+	// const postData = await getPostDataFromGit(params.id as string);
 	return {
 		props: {
 			postData

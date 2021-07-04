@@ -1,5 +1,6 @@
 import fs from 'fs';
 import matter from 'gray-matter';
+import { decode } from 'js-base64';
 import path from 'path';
 import remark from 'remark';
 import html from 'remark-html';
@@ -66,6 +67,48 @@ export function getAllPostIds() {
 export async function getPostData(id: string) {
 	const fullPath = path.join(postsDirectory, `${id}.md`);
 	const fileContents = fs.readFileSync(fullPath, 'utf8');
+
+	// Use gray-matter to parse the post metadata section
+	const matterResult = matter(fileContents);
+
+	// Use remark to convert markdown into HTML string
+	const processedContent = await remark().use(html).process(matterResult.content);
+	const contentHtml = processedContent.toString();
+
+	// Combine the data with the id and contentHtml
+	return {
+		id,
+		contentHtml,
+		...(matterResult.data as { date: string; title: string })
+	};
+}
+
+// =================================================
+// Get Contents From Git
+
+export async function getAllPostIdsFromGit() {
+	const repoUrl = 'https://api.github.com/repos/nemutas/nextjs-tutorial-blog/contents/posts';
+	const res = await fetch(repoUrl);
+	const files = await res.json();
+	console.log(files);
+	const fileNames = files.map(file => file.name);
+
+	return fileNames.map(fileName => {
+		return {
+			params: {
+				id: fileName.replace(/\.md$/, '')
+			}
+		};
+	});
+}
+
+export async function getPostDataFromGit(id: string) {
+	const repoUrl = `https://api.github.com/repos/nemutas/nextjs-tutorial-blog/contents/posts/${id}.md`;
+	const res = await fetch(repoUrl);
+	const file = await res.json();
+	const fileContents = decode(file.content);
+
+	console.log('file.content', fileContents);
 
 	// Use gray-matter to parse the post metadata section
 	const matterResult = matter(fileContents);
