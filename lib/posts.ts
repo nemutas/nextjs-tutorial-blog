@@ -1,9 +1,9 @@
 import fs from 'fs';
 import matter from 'gray-matter';
-import { decode } from 'js-base64';
 import path from 'path';
 import remark from 'remark';
 import html from 'remark-html';
+import { getArticleText, getFilePaths } from '../firebase/nodeFunctions';
 
 const postsDirectory = path.join(process.cwd(), 'posts');
 
@@ -84,14 +84,43 @@ export async function getPostData(id: string) {
 }
 
 // =================================================
-// Get Contents From Git
+// Get Contents From Firebase Storage
 
-export async function getAllPostIdsFromGit() {
-	const repoUrl = 'https://api.github.com/repos/nemutas/nextjs-tutorial-blog/contents/posts';
-	const res = await fetch(repoUrl);
-	const files = await res.json();
-	console.log(files);
-	const fileNames = files.map(file => file.name);
+export async function getSortedPostsDataFromFirebase() {
+	const filePaths = await getFilePaths();
+
+	const allPostsData = await Promise.all(
+		filePaths.map(async filePath => {
+			const fileName = path.basename(filePath);
+			const id = fileName.replace(/\.md$/, '');
+
+			const fileContents = await getArticleText(fileName);
+
+			const matterResult = matter(fileContents);
+
+			return {
+				id,
+				...(matterResult.data as { date: string; title: string })
+			};
+		})
+	);
+
+	// Sort posts by date
+	return allPostsData.sort(({ date: a }, { date: b }) => {
+		if (a < b) {
+			return 1;
+		} else if (a > b) {
+			return -1;
+		} else {
+			return 0;
+		}
+	});
+}
+
+export async function getAllPostIdsFromFirebase() {
+	const filePaths = await getFilePaths();
+
+	const fileNames = filePaths.map(fp => path.basename(fp));
 
 	return fileNames.map(fileName => {
 		return {
@@ -102,22 +131,14 @@ export async function getAllPostIdsFromGit() {
 	});
 }
 
-export async function getPostDataFromGit(id: string) {
-	const repoUrl = `https://api.github.com/repos/nemutas/nextjs-tutorial-blog/contents/posts/${id}.md`;
-	const res = await fetch(repoUrl);
-	const file = await res.json();
-	const fileContents = decode(file.content);
+export async function getPostDataFromFirebase(id: string) {
+	const fileContents = await getArticleText(id);
 
-	console.log('file.content', fileContents);
-
-	// Use gray-matter to parse the post metadata section
 	const matterResult = matter(fileContents);
 
-	// Use remark to convert markdown into HTML string
 	const processedContent = await remark().use(html).process(matterResult.content);
 	const contentHtml = processedContent.toString();
 
-	// Combine the data with the id and contentHtml
 	return {
 		id,
 		contentHtml,
