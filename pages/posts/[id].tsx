@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Date from '../../components/date';
 import Layout from '../../components/layout';
 import {
-	getAllPostIds, getAllPostIdsFromGit, getPostData, getPostDataFromGit
+	getAllPostIds, getAllPostIdsFromFirebase, getPostData, getPostDataFromFirebase
 } from '../../lib/posts';
 import utilStyles from '../../styles/utils.module.css';
 
@@ -34,8 +34,8 @@ export default function Post({ postData }: PropsType) {
 }
 
 export const getStaticPaths: GetStaticPaths = async () => {
-	const paths = getAllPostIds();
-	// const paths = await getAllPostIdsFromGit();
+	// const paths = getAllPostIds();
+	const paths = await getAllPostIdsFromFirebase();
 	return {
 		paths,
 		fallback: false
@@ -43,8 +43,8 @@ export const getStaticPaths: GetStaticPaths = async () => {
 };
 
 export const getStaticProps: GetStaticProps = async ({ params }) => {
-	const postData = await getPostData(params.id as string);
-	// const postData = await getPostDataFromGit(params.id as string);
+	// const postData = await getPostData(params.id as string);
+	const postData = await getPostDataFromFirebase(params.id as string);
 	return {
 		props: {
 			postData
